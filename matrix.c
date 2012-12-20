@@ -14,13 +14,18 @@ int compareDouble(double a, double b) {
 		return (-diff < EPSILON);
 }
 
-void matInitNull(double *mat, int n) {
+int isSquare(int x) {
+	int root = (int) sqrt(x);
+	return root*root == x;
+}
+
+void matInitNull(double* mat, int n) {
 	int i, j;
 	for(i = 0; i < n * n; i++) 
 		mat[i] = 0;
 }
 
-void matInitId(double *mat, int n) {
+void matInitId(double* mat, int n) {
 	int i, j;
 	for(i = 0; i < n; i++) 
 		for (j = 0; j < n; j++)
@@ -30,7 +35,7 @@ void matInitId(double *mat, int n) {
 				mat[i * n + j] = 0;
 }
 
-void matInitA(double *mat, int n) {
+void matInitA(double* mat, int n) {
 	int i, j;
 	for(i = 0; i < n; i++) {
 		for(j = 0; j < n; j++) {
@@ -39,7 +44,7 @@ void matInitA(double *mat, int n) {
 	}
 }
 
-void matInitB(double *mat, int n) {
+void matInitB(double* mat, int n) {
 	int i, j;
 	for(i = 0; i < n; i++) {
 		for(j = 0; j < n; j++) {
@@ -48,7 +53,7 @@ void matInitB(double *mat, int n) {
 	}
 }
 
-void matPrint(double *mat, int n) {
+void matPrint(double* mat, int n) {
 	int i,j;
 	for(i = 0; i < n; i++) {
 		for(j = 0; j < n; j++) {
@@ -59,7 +64,7 @@ void matPrint(double *mat, int n) {
 	printf("\n");
 }
 
-void matMult(double *A, double *B, double *mat, int n) {
+void matMult(double* A, double* B, double* mat, int n) {
 	int i,j,k;
 	for(i = 0; i < n; i++)	
 		for(j = 0; j < n; j++)	
@@ -68,14 +73,17 @@ void matMult(double *A, double *B, double *mat, int n) {
 	
 }
 
-void matMultCannon(double *A, double *B, double *mat, int n, int numProcs, int myId) {
+void matMultCannon(double* A, double* B, double* mat, int n, int numProcs, int myId) {
+	assert( isSquare(numProcs) );
+	//meiner Meinung braucht man den double-cast in der sqrt()-Funktion nicht
+	//da sqrt() mindestens eine float Zahl liefert
 	assert ((n % (int) sqrt((double) numProcs)) == 0);
 
 	// MPI_Sendrecv_replace();
 	printf("TODO");
 }
 
-int matEquals(double *a, double *b, int n){
+int matEquals(double* a, double* b, int n){
 	int i,j,k;
 	for(i = 0; i < n; i++)
 		for(j = 0; j < n; j++)
@@ -98,6 +106,10 @@ int main(int argc, char** argv) {
 	double* A = malloc(n*n*sizeof(double));
 	double* B = malloc(n*n*sizeof(double));
 	double* C = malloc(n*n*sizeof(double));
+	
+	if(!A || !B || !C) {
+		perror("Failure: ");	
+	}
 
 	matInitId(A,n);
 	matInitB(B,n);
@@ -105,7 +117,7 @@ int main(int argc, char** argv) {
 	double startTime = MPI_Wtime();
 	matMult(A,B,C,n);
 	double diff_time = MPI_Wtime() - startTime;
-	printf("Equal?: %d\n",	matEquals(B,C,n));
+//	printf("Equal?: %d\n",	matEquals(B,C,n));
 	printf("Time:     %.2f MFLOPS\n", num_flops / (diff_time * mil));
 
 	startTime = MPI_Wtime();
@@ -114,6 +126,9 @@ int main(int argc, char** argv) {
 	printf("Bib-Time: %.2f MFLOPS\n", num_flops / (diff_time * mil));
 	
 
+	free(A);
+	free(B);
+	free(C);
 	MPI_Finalize();		
 	return 0;
 } 
