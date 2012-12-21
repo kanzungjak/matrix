@@ -1,4 +1,4 @@
 matrix
 ======
 
-MPI Matrix Multiplocation
+MPI Matrix Multiplication

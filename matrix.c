@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <math.h>
-#include <assert.h>
+//#include <assert.h>
 #include "matrix.h"
 #define EPSILON 0.000001
+
 
 int compareDouble(double a, double b) {
 	double diff = a - b;
@@ -12,6 +13,17 @@ int compareDouble(double a, double b) {
 		return (diff < EPSILON);
 	else 
 		return (-diff < EPSILON);
+}
+
+void assert(int assertion, char* asst) {
+	if(!assertion) {
+		int myId;
+		MPI_Comm_rank(MPI_COMM_WORLD,&myId);
+		if(!myId)
+			printf("\nAssertion violation %s:%u: %s\n", __FILE__,__LINE__, asst);
+		MPI_Finalize();
+		exit(EXIT_FAILURE);
+	}
 }
 
 int isSquare(int x) {
@@ -27,21 +39,35 @@ void matInitNull(double* mat, int n) {
 
 void matInitId(double* mat, int n) {
 	int i, j;
-	for(i = 0; i < n; i++) 
-		for (j = 0; j < n; j++)
+	for(i = 0; i < n; i++)
+		for(j = 0; j < n; j++)
 			if(i == j)
 				mat[i * n + j] = 1;
 			else
 				mat[i * n + j] = 0;
 }
 
-void matInitA(double* mat, int n) {
+void matInitId(double* mat, int n, int numProcs, int myId) {
+	int i, j;
+	if(myId % (sqrt(numProcs)+1) == 0) {
+		matInitId(mat, n / sqrt(numProcs));
+	} else {
+		matInitNull(mat, n / sqrt(numProcs));
+}
+
+void matInitA(double* mat, int n, int xOffset, int yOffset) {
 	int i, j;
 	for(i = 0; i < n; i++) {
 		for(j = 0; j < n; j++) {
-			mat[i * n + j] = (double) i / (j + 1);
+			mat[i * n + j] = (double) (i + xOffset) / (j + yOffset  + 1);
 		}
 	}
+}
+
+void matInitA(double* mat, int n, int numProcs, int myId) {
+	int xOff = myId % sqrt(numProcs);
+	int yOff = 42;
+	matInitA(mat, n / sqrt(numProcs), xOff, yOff);
 }
 
 void matInitB(double* mat, int n) {
@@ -73,14 +99,20 @@ void matMult(double* A, double* B, double* mat, int n) {
 	
 }
 
+void rotate()
+
 void matMultCannon(double* A, double* B, double* mat, int n, int numProcs, int myId) {
-	assert( isSquare(numProcs) );
-	//meiner Meinung braucht man den double-cast in der sqrt()-Funktion nicht
-	//da sqrt() mindestens eine float Zahl liefert
-	assert ((n % (int) sqrt((double) numProcs)) == 0);
+	assert(isSquare(numProcs), "NumProcs is not a square number.");
+	assert(n % (int) sqrt(numProcs) == 0, "Sqrt(numProcs) does not divide n.");
+
+	int i;
+
+	for(i=0; i<n; i++) {
+	
+	
+	}
 
 	// MPI_Sendrecv_replace();
-	printf("TODO");
 }
 
 int matEquals(double* a, double* b, int n){
@@ -96,34 +128,37 @@ int matEquals(double* a, double* b, int n){
 
 int main(int argc, char** argv) {
 	int numProcs, myId;
+	int n = atoi(argv[1]); 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &myId);
-	int n = 1000;
+	int n_proc = n / sqrt(numProcs);
 	double num_flops = 2 * pow(n,3) - pow(n,2);
 	double mil = 1000000;
 
-	double* A = malloc(n*n*sizeof(double));
-	double* B = malloc(n*n*sizeof(double));
-	double* C = malloc(n*n*sizeof(double));
+	double* A = malloc(n_proc*n_proc*sizeof(double));
+	double* B = malloc(n_proc*n_proc*sizeof(double));
+	double* C = malloc(n_proc*n_proc*sizeof(double));
 	
+	matMultCannon(A,B,C,n_proc,numProcs,myId);
 	if(!A || !B || !C) {
 		perror("Failure: ");	
 	}
-
-	matInitId(A,n);
-	matInitB(B,n);
-
+	
+	matInitId(A,n,numProcs,myId);
+	matInitB(B,n,numProcs,myId);
+	matInitNull(C,n_proc);
+	
 	double startTime = MPI_Wtime();
 	matMult(A,B,C,n);
 	double diff_time = MPI_Wtime() - startTime;
 //	printf("Equal?: %d\n",	matEquals(B,C,n));
-	printf("Time:     %.2f MFLOPS\n", num_flops / (diff_time * mil));
+	printf("Time %i:     %.2f MFLOPS\n", myId, num_flops / (diff_time * mil));
 
 	startTime = MPI_Wtime();
 	matMatMult(n,A,B,C);
 	diff_time = MPI_Wtime() - startTime;
-	printf("Bib-Time: %.2f MFLOPS\n", num_flops / (diff_time * mil));
+	printf("Bib-Time %i: %.2f MFLOPS\n", myId, num_flops / (diff_time * mil));
 	
 
 	free(A);
