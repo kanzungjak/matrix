@@ -104,12 +104,13 @@ void matPrint(double* mat, int n, int numProcs, int myId) {
 	int blocks_per_dim = (int) sqrt(numProcs);
 	if(numProcs > 1) {
 		double* complete = malloc(n*n*numProcs*sizeof(double));
-		//MPI_Gather(mat,      n*n, MPI_DOUBLE, 
-		//	   complete, n*n, MPI_DOUBLE,
-		//	   0, MPI_COMM_WORLD);
+		MPI_Gather(mat,      n*n, MPI_DOUBLE, 
+			   complete, n*n, MPI_DOUBLE,
+			   0, MPI_COMM_WORLD);
 
-		MPI_Status status;
-		for(k = 0; k < blocks_per_dim; k++) {
+		//MPI_Status status; // So in etwa müsste die Ausgabe funktionieren (also theoretisch)
+				   // Scheint aber noch irgendein Fehler drin zu sein, vielleicht findest du's?
+		/*for(k = 0; k < blocks_per_dim; k++) {
 			for(j = 0; j < n; j++) {
 				for(i = 0; i < blocks_per_dim; i++) {
 					l = i + k * blocks_per_dim;
@@ -119,7 +120,7 @@ void matPrint(double* mat, int n, int numProcs, int myId) {
 				     	     	     MPI_COMM_WORLD, &status);
 				}
 			}
-		}
+		}*/
 
 		n *= blocks_per_dim;
 		if(!myId) {
@@ -148,58 +149,63 @@ void matPrint(double* mat, int n, int numProcs, int myId) {
 void matMult(double* A, double* B, double* mat, int n) {
 	int i,j,k;
 	for(i = 0; i < n; i++)	
-		for(j = 0; j < n; j++)	
+		 for(j = 0; j < n; j++)	
 			for(k = 0; k < n; k++)
 				mat[i * n + j] += A[i * n + k] * B[k * n + j];
 	
 }
 
-void rotate_left(double* mat, int n) {
-	int i,j;
-	double* tmp;
-	int left_nb;
-	tmp = malloc(n*sizeof(double)); //one row
-	//save first row temporally
-	for(i = 0; i < n; i++ )
-		tmp[i] = mat[i*n];
-	for(i = 0; i < n; i++) { //all columns
-		for(j = 1; j < n-1; j++) { //all rows except first and last one (which will be sent (received) to (from) others PEs)
-			mat[i*n + j] = mat[i*n+j + 1];
-		}
-	}
-
-	//MPI_Sendrecv_replace(void* buf, int count, MPI_Datatype datatype,
-	//		     int dest, int sendtag, int source, int recvtag, MPI_Comm comm,
-        // 	     	     MPI_Status *status);
-	MPI_Status status;
-	for(i = 0; i < n; i++) {
-		MPI_Sendrecv_replace(&mat[i*n], 1, MPI_DOUBLE,
-			   	     left_nb, MPI_ANY_TAG, myId, MPI_ANY_TAG, 
-				     MPI_COMM_WORLD, &status);
-	}
-
-//	free(tmp);
+void matAdd(double* A, double* B, double* mat, int n) {
+	int i;
+	for(i = 0; i < n*n; i++)	
+		mat[i] = A[i] + B[i];
 }
 
-void rotate_up() {
+void matMultAdd(double* A, double* B, double* mat, int n ) {
+	double* C = malloc(n*n*sizeof(double));
+	matMult(A, B, C, n);
+	matAdd(mat, C, mat, n);
+}
 
+int isMostLeft() {
+	return myId % (int)sqrt(numProcs) == 0;
+}
+
+void rotate_left(double* mat, int n_proc) {
+	int left_nb = isMostLeft() ? (myId + (int)sqrt(numProcs) - 1) : (myId - 1);
+	MPI_Status status;
+	MPI_Sendrecv_replace(mat, n_proc*n_proc, MPI_DOUBLE,
+			     left_nb, MPI_ANY_TAG, myId, MPI_ANY_TAG,
+			     MPI_COMM_WORLD, &status);
+
+}
+
+void rotate_up(double* mat, int n_proc) {
+	int upper_nb = (myId - (int)sqrt(numProcs) + numProcs) % numProcs;
+	MPI_Status status;
+	MPI_Sendrecv_replace(mat, n_proc*n_proc, MPI_DOUBLE,
+			     upper_nb, MPI_ANY_TAG, myId, MPI_ANY_TAG,
+			     MPI_COMM_WORLD, &status);
 }
 
 void matMultCannon(double* A, double* B, double* mat, int n, int numProcs, int myId) {
 	assert(isSquare(numProcs), "numProcs is not a square number.");
 	assert(n % (int) sqrt(numProcs) == 0, "Sqrt(numProcs) does not divide n.");
 
-	int i,j,k;
-	i = 42;
-	j = i;
-	int index_mod;
-	for(k = 0; k < n*n; k++) { //bis n? wohl eher n*n
-//		c[i,j] = c[i,j] + a[i,(i+j+k)%n] * b[(i+j+k)%n,j];
-		index_mod = i+j+k % n;
-		mat[i*n + j] += A[i*n + index_mod]*B[index_mod*n + j]; 	
-	}
+	int i,j;
+	matInitNull(mat, n);
 
-	// MPI_Sendrecv_replace();
+
+	for(j = 0; j < (myId / sqrt(numProcs)); j++) // y-dim
+			rotateLeft(A, n/sqrt(numProcs));
+	for(j = 0; j < (myId % sqrt(numProcs)); j++) // x-dim
+			rotateUp(B, n/sqrt(numProcs));	
+
+	for (i = 0; i < n; i++) {
+		matMultAdd(A, B, mat, n);
+		rotateLeft(A, n/sqrt(numProcs));
+		rotateUp(B, n/sqrt(numProcs));
+	}
 }
 
 
@@ -218,7 +224,12 @@ int matEquals(double* a, double* b, int n){
 
 int main(int argc, char** argv) {
 	int n = atoi(argv[1]); //width (and height) of a matrix
-
+	printf ("%d\n", argc);
+	if (argc < 2) {
+		printf("Usage: matrix 'length'");
+		exit(EXIT_FAILURE);
+	}
+	
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &myId);
