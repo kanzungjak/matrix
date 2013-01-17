@@ -18,6 +18,11 @@ void assert(int assertion, char* errMsg) {
 	}
 }
 
+
+//nProc benutzen wir doch recht häufig, warum nicht als Konstante speichern,
+//so muss mann es nicht immer wieder ausrechnen --> Joa, hast eigentlich Recht, hängt aber von 'n' ab.
+//Aber tu dir keinen Zwang an ;).
+//gute Namenswahl!
 int nProc(int n) { // Width (and height) for each process
 	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
 	return (n / blocksPerDim);
@@ -33,6 +38,37 @@ int yPos() {
 	return (myId / blocksPerDim);
 }
 
+int isLeftMost() {
+	return xPos() == 0;
+}
+
+int isRightMost() {
+	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
+	return (myId + 1) % blocksPerDim == 0;
+}
+
+int leftNb() {
+	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
+	return (isLeftMost() ? (myId + blocksPerDim - 1) : (myId - 1));
+}
+
+int rightNb() {
+	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
+	return (isRightMost() ? (myId - blocksPerDim + 1) : (myId + 1));
+}
+
+int upperNb() {
+	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
+	assert(numProcs > 0, "numProcs is not calculated yet.");
+	return ((myId - blocksPerDim + numProcs) % numProcs);
+}
+
+int lowerNb() {
+	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
+	assert(numProcs > 0, "numProcs is not calculated yet.");
+	return ((myId + blocksPerDim) % numProcs);
+}
+
 int compareDouble(double a, double b) {
 	double diff = a - b;
 	if(diff >= 0)
@@ -46,10 +82,11 @@ int isSquare(int x) {
 	return root * root == x;
 }
 
+//ehhh, what's the point of that?
 // Null Matrix (local)
-void matLocInitNull(double* mat, int nProc) {
+void matLocInitNull(double* mat, int nLoc) {
 	int i;
-	for(i = 0; i < nProc * nProc; i++) 
+	for(i = 0; i < nLoc * nLoc; i++) 
 		mat[i] = 0;
 }
 
@@ -59,14 +96,14 @@ void matInitNull(double* mat, int n) {
 }
 
 // Identity matrix (local)
-void matLocInitId(double* mat, int nProc) {
+void matLocInitId(double* mat, int nLoc) {
 	int i, j;
-	for(i = 0; i < nProc; i++)
-		for(j = 0; j < nProc; j++)
+	for(i = 0; i < nLoc; i++)
+		for(j = 0; j < nLoc; j++)
 			if(i == j)
-				mat[i * nProc + j] = 1;
+				mat[i * nLoc + j] = 1;
 			else
-				mat[i * nProc + j] = 0;
+				mat[i * nLoc + j] = 0;
 }
 
 // Identity Matrix (global)
@@ -79,32 +116,32 @@ void matInitId(double* mat, int n) {
 	}
 }
 
-// A[i,j] = i / (i + j) (local)
-void matLocInitA(double* mat, int nProc, int xOff, int yOff) {
+// A[i,j] = i / (j + 1) (local)
+void matLocInitA(double* mat, int nLoc, int xOff, int yOff) {
 	int i, j;
-	xOff *= nProc;
-	yOff *= nProc;
-	for(i = 0; i < nProc; i++) {
-		for(j = 0; j < nProc; j++) {
-			mat[i * nProc + j] = (double) (i + xOff) / (j + yOff  + 1);
+	xOff *= nLoc;
+	yOff *= nLoc;
+	for(i = 0; i < nLoc; i++) {
+		for(j = 0; j < nLoc; j++) {
+			mat[i * nLoc + j] = (double) (i + yOff) / (j + xOff  + 1);
 		}
 	}
 }
 
-// A[i,j] = i / (i + j) (global)
+// A[i,j] = i / (j + 1) (global)
 void matInitA(double* mat, int n) {
 	matLocInitA(mat, nProc(n), xPos(), yPos());
 }
 
 
 // A[i,j] = (i + 1) / (n * (j + 1)) (local)
-void matLocInitB(double* mat, int nProc, int xOff, int yOff) {
+void matLocInitB(double* mat, int nLoc, int xOff, int yOff) {
 	int i, j;
-	xOff *= nProc;
-	yOff *= nProc;
-	for(i = 0; i < nProc; i++) {
-		for(j = 0; j < nProc; j++) {
-			mat[i * nProc + j] = (double) (i+1 + xOff) / (nProc * (j + yOff + 1));
+	xOff *= nLoc;
+	yOff *= nLoc;
+	for(i = 0; i < nLoc; i++) {
+		for(j = 0; j < nLoc; j++) {
+			mat[i * nLoc + j] = (double) (i+1 + yOff) / (nLoc * blocksPerDim * (j + xOff + 1));
 		}
 	}
 }
@@ -117,29 +154,36 @@ void matInitB(double* mat, int n) {
 // Print entries of a matrix, not a good idea for big matrices
 void matPrint(double* mat, int n) {
 	int i,j;
+	int nLoc = nProc(n);
 	double* complete = malloc(n * n * sizeof(double));
 	if(numProcs > 1) {
-		/*MPI_Gather(mat,    nProc(n) * nProc(n), MPI_DOUBLE, 
-			   complete, nProc(n) * nProc(n), MPI_DOUBLE,
-			   0, MPI_COMM_WORLD);*/
+		/*MPI_Gather(mat,    nLoc * nLoc, MPI_DOUBLE, 
+		  complete, nLoc * nLoc, MPI_DOUBLE,
+		  0, MPI_COMM_WORLD);*/
 		MPI_Comm line, row;
 		MPI_Comm_split(MPI_COMM_WORLD, yPos(), myId, &line);
-		for(i = 0; i < nProc(n); i++) {
-			MPI_Gather(&mat[i * nProc(n)], nProc(n), MPI_DOUBLE,
-		    		   &complete[i * n], nProc(n), MPI_DOUBLE,
+		for(i = 0; i < nLoc; i++) {
+			MPI_Gather(&mat[i * nLoc], nLoc, MPI_DOUBLE,
+		   		   &complete[i * n], nLoc, MPI_DOUBLE,
 				   0, line);
 		}
 		MPI_Comm_free(&line);
 
 		MPI_Comm_split(MPI_COMM_WORLD, xPos(), myId, &row);
-		MPI_Gather(complete, n * nProc(n), MPI_DOUBLE,
-	     	     	   complete, n * nProc(n), MPI_DOUBLE,
-			   0, row);  // Hmm, besser, aber immer noch nicht ganz richtig glaubich ...
+
+		if(!yPos() )
+			MPI_Gather(MPI_IN_PLACE, n * nLoc, MPI_DOUBLE,
+			   complete, n * nLoc, MPI_DOUBLE,
+			   0, row);
+		else
+			MPI_Gather(complete, n * nLoc, MPI_DOUBLE,
+			   complete, n * nLoc, MPI_DOUBLE,
+			   0, row);
 		MPI_Comm_free(&row);
 	} else {
 		complete = mat;
 	}
-	//MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Barrier(MPI_COMM_WORLD);
 	if(!myId) {
 		for(i = 0; i < n; i++) {
 			for(j = 0; j < n; j++) {
@@ -151,58 +195,125 @@ void matPrint(double* mat, int n) {
 		}
 		printf("\n");
 	}
+
+	if(!complete)
+		free(complete);
 }
 
 // Naive matrix multiplication
-void matMult(double* A, double* B, double* mat, int n) {
+void matLocMult(double* A, double* B, double* mat, int nLoc) {
 	int i,j,k;
-	// Wollen wir das wirklich so machen?
-	// Muss man doch irgendwie zwischen den Prozessen kommunizieren ?! -> sehr oft sendrecv vermutl.
-	// Momentan machen wir eher das Folgende (mat) für myProcs = 4:
-	// mat = |A0*B0|A1*B1| =!= A*B = |A0*B0+A1*B2|A0*B1+A1*B3|
-	//       |A2*B2|A3*B3|           |A2*B0+A3*B2|A2*B1+A3*B3|
-	for(i = 0; i < nProc(n); i++)
-		 for(j = 0; j < nProc(n); j++)
-			for(k = 0; k < nProc(n); k++)
-				mat[i * nProc(n) + j] += A[i * nProc(n) + k] * B[k * nProc(n) + j];
+	for(i = 0; i < nLoc; i++)
+		for(j = 0; j < nLoc; j++)
+			for(k = 0; k < nLoc; k++)
+				mat[i * nLoc + j] += A[i * nLoc + k] * B[k * nLoc + j];
 }
 
 void matAdd(double* A, double* B, double* mat, int n) {
 	int i;
-	for(i = 0; i < nProc(n) * nProc(n); i++)	
+	int nLoc = nProc(n);
+	for(i = 0; i < nLoc * nLoc; i++)
 		mat[i] = A[i] + B[i];
 }
 
-void matMultAdd(double* A, double* B, double* mat, int n ) {
-	double* C = malloc(nProc(n) * nProc(n) * sizeof(double));
-	matMult(A, B, C, n);
+void matLocMultAdd(double* A, double* B, double* mat, int n ) {
+	int nLoc = nProc(n);
+	double* C = malloc(nLoc * nLoc * sizeof(double));
+	matLocMult(A, B, C, nLoc);
 	matAdd(mat, C, mat, n);
 	free(C);
 }
 
-int isLeftMost() {
-	return xPos() == 0;
-}
+void matMult(double* A, double* B, double* mat, int n) { // FIXME: Does not work yet, help welcome!
+	int i,j;
+	int nLoc = nProc(n);
 
-int isRightMost() {
-	return (myId + 1) % blocksPerDim == 0;
+	double* NewA = malloc(blocksPerDim * nLoc * nLoc * sizeof(double));
+	double* NewB = malloc(blocksPerDim * nLoc * nLoc * sizeof(double));
+	double* Loc = malloc(nLoc * nLoc * sizeof(double));
+	// A*B = |A0*B0|
+
+	// A*B = |A0*B0+A1*B2|A0*B1+A1*B3|
+	//       |A2*B0+A3*B2|A2*B1+A3*B3|
+
+	// A*B = |A0*B0+A1*B3+A2*B6|A0*B1+A1*B4+A2*B7|A0*B2+A1*B5+A2*B8|
+	// 	 |A3*B0+A4*B3+A5*B6|A3*B1+A4*B4+A5*B7|A3*B2+A4*B5+A5*B8|
+	// 	 |A6*B0+A7*B3+A8*B6|A6*B1+A7*B4+A8*B7|A6*B2+A7*B5+A8*B8|
+
+	// A*B = |A0 *B0+A1 *B4+A2 *B8+A3 *B12|A0 *B1+A1 *B5+A2 *B9+A3 *B13|A0 *B2+A1 *B6+A2 *B10+A3 *B14|A0 *B3+A1 *B7+A2 *B11+A3 *B15|
+	// 	 |A4 *B0+A5 *B4+A6 *B8+A7 *B12|A4 *B1+A5 *B5+A6 *B9+A7 *B13|A4 *B2+A5 *B6+A6 *B10+A7 *B14|A4 *B3+A5 *B7+A6 *B11+A7 *B15|
+	// 	 |A8 *B0+A9 *B4+A10*B8+A11*B12|A8 *B1+A9 *B5+A10*B9+A11*B13|A8 *B2+A9 *B6+A10*B10+A11*B14|A8 *B3+A9 *B7+A10*B11+A11*B15|
+	// 	 |A12*B0+A13*B4+A14*B8+A15*B12|A12*B1+A13*B5+A14*B9+A15*B13|A12*B2+A13*B6+A14*B10+A15*B14|A12*B3+A13*B7+A14*B11+A15*B15|
+
+	MPI_Comm line, row;
+	int lineId, rowId;
+	MPI_Comm_split(MPI_COMM_WORLD, yPos(), myId, &line);
+	MPI_Comm_rank(line, &lineId);
+	MPI_Comm_split(MPI_COMM_WORLD, xPos(), myId, &row);
+	MPI_Comm_rank(row, &rowId);
+	MPI_Status status[2];
+	MPI_Request* reqLine = malloc(blocksPerDim * sizeof(MPI_Request));
+	MPI_Request* reqRow = malloc(blocksPerDim * sizeof(MPI_Request));
+
+	matInitNull(mat, n);
+
+	for(i = 0; i < blocksPerDim; i++) {
+		if(i != lineId)
+			MPI_Isend(A, nLoc * nLoc, MPI_DOUBLE, i, i, line, &reqLine[i]);
+	}
+	for(j = 0; j < blocksPerDim; j++) {
+		if(j != rowId)
+			MPI_Isend(B, nLoc * nLoc, MPI_DOUBLE, j, j, row, &reqRow[j]);
+	}
+
+	for(i = 0; i < blocksPerDim; i++) {
+		matInitNull(NewA, n);
+		if(i != lineId)
+			MPI_Irecv(&NewA[i * nLoc * nLoc], nLoc * nLoc, MPI_DOUBLE, i, i, line, &reqLine[i]);
+	}
+
+	for(j = 0; j < blocksPerDim; j++) {
+		matInitNull(NewB, n);
+		if(j != rowId)
+			MPI_Irecv(&NewB[j * nLoc * nLoc], nLoc * nLoc, MPI_DOUBLE, j, j, row, &reqRow[j]);
+	}
+
+	for(i = 0; i < blocksPerDim; i++) {
+		matInitNull(Loc, n);
+		printf("Processor %d with (%d,%d) is waiting for its line.\n",myId,i,j);
+		if(i != lineId)
+			MPI_Wait(&reqLine[i], &status[0]);
+		printf("Processor %d with (%d,%d) is waiting for its row.\n",myId,i,j);
+		if(j != rowId)
+			MPI_Wait(&reqRow[j], &status[1]);
+		printf("Processor %d with (%d,%d) has received.\n",myId,i,j);
+		if (i != lineId && i != rowId)
+			matLocMult(&NewA[i * nLoc * nLoc], &NewB[j * nLoc * nLoc], Loc, nLoc);
+		else if (i == rowId)
+			matLocMult(A, &NewB[i * nLoc * nLoc], Loc, nLoc);
+		else if (j == lineId)
+			matLocMult(&NewA[i * nLoc * nLoc], B, Loc, nLoc);
+		matAdd(mat, Loc, mat, n);
+	}
 }
 
 void rotateLeft(double* mat, int n) {
-	int left_nb = isLeftMost() ? (myId + blocksPerDim - 1) : (myId - 1);
-	int right_nb = isRightMost() ? (myId - blocksPerDim + 1) : (myId + 1);
+	int nLoc = nProc(n);
+	int left = leftNb();
+	int right = rightNb();
 	MPI_Status status;
-	MPI_Sendrecv_replace(mat, nProc(n)*nProc(n), MPI_DOUBLE,
-			     left_nb, 37, right_nb, MPI_ANY_TAG,
+	MPI_Sendrecv_replace(mat, nLoc * nLoc, MPI_DOUBLE,
+			     left, 37, right, MPI_ANY_TAG,
 			     MPI_COMM_WORLD, &status);
 }
 
 void rotateUp(double* mat, int n) {
-	int upper_nb = (myId - blocksPerDim + numProcs) % numProcs;
-	int lower_nb = (myId + blocksPerDim) % numProcs;
+	int nLoc = nProc(n);
+	int upper = upperNb();
+	int lower = lowerNb();
 	MPI_Status status;
-	MPI_Sendrecv_replace(mat, nProc(n)*nProc(n), MPI_DOUBLE,
-			     upper_nb, 38, lower_nb, MPI_ANY_TAG,
+	MPI_Sendrecv_replace(mat, nLoc * nLoc, MPI_DOUBLE,
+			     upper, 38, lower, MPI_ANY_TAG,
 			     MPI_COMM_WORLD, &status);
 }
 
@@ -219,31 +330,38 @@ void matMultCannon(double* A, double* B, double* mat, int n) {
 	for(i = 0; i < xPos(); i++){ // x-dim
 		rotateUp(B, n);	
 	}
-
+	int nLoc = nProc(n);
 	for (i = 0; i < blocksPerDim; i++) {
-		matMultAdd(A, B, mat, n);
+		//matLocMultAdd(A, B, mat, n);
+		matMatMultAdd(nLoc, A, B, mat);
 		rotateLeft(A, n);
 		rotateUp(B, n);
 	}
 }
 
-
 //0: First entry, which is unequal
 //1: A = B
-int matEquals(double* A, double* B, int n){
+int matLocEquals(double* A, double* B, int nLoc){
 	int i,j,k;
-	for(i = 0; i < nProc(n); i++)
-		for(j = 0; j < nProc(n); j++)
-			if( !compareDouble(A[i * nProc(n) + j], B[i * nProc(n) + j]) ) {
-				printf("a: %f -  b: %f index: (%d,%d)\n", A[i * nProc(n) + j], B[i * nProc(n) + j], i, j);
+	for(i = 0; i < nLoc; i++)
+		for(j = 0; j < nLoc; j++)
+			if( !compareDouble(A[i * nLoc + j], B[i * nLoc + j]) ) {
+				//printf("a: %f -  b: %f index: (%d,%d)\n", A[i * nLoc + j], B[i * nLoc + j], i, j);
 				return 0;
 			}
 	return 1;
 }
 
+int matEquals(double* A, double* B, int n){
+	int nLoc = nProc(n);
+	int eq;	
+	int e = matLocEquals(A, B, nLoc);
+	MPI_Reduce(&e, &eq, 1, MPI_INT, MPI_LAND, 0, MPI_COMM_WORLD);
+	return eq;
+}
+
 int main(int argc, char** argv) {
 	int n = atoi(argv[1]); // Width (and height) of a matrix
-//	printf ("%d\n", argc);
 	if (argc < 2) {
 		printf("Usage: matrix 'length'");
 		exit(EXIT_FAILURE);
@@ -252,65 +370,75 @@ int main(int argc, char** argv) {
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &myId);
-	
+
 	blocksPerDim = (int) sqrt(numProcs);
+	int nLoc = nProc(n);
 
 	double numFlops = 2 * pow(n,3) - pow(n,2); // Number of flops for naive matrix-multiplication
-	
 
-	double* A = malloc(nProc(n) * nProc(n) * sizeof(double));
-	double* B = malloc(nProc(n) * nProc(n) * sizeof(double));
-	double* C = malloc(nProc(n) * nProc(n) * sizeof(double));
-	double* D = malloc(nProc(n) * nProc(n) * sizeof(double));
-	double* E = malloc(nProc(n) * nProc(n) * sizeof(double));
-	double* F = malloc(nProc(n) * nProc(n) * sizeof(double));
-	if(!A || !B || !C || !D || !E) {
+
+	double* A = malloc(nLoc * nLoc * sizeof(double));
+	double* B = malloc(nLoc * nLoc * sizeof(double));
+	double* C = malloc(nLoc * nLoc * sizeof(double));
+	double* D = malloc(nLoc * nLoc * sizeof(double));
+	double* E = malloc(nLoc * nLoc * sizeof(double));
+	double* F = malloc(nLoc * nLoc * sizeof(double));
+	if(!A || !B || !C || !D || !E || !F) {
 		perror("Failure: ");	
 	}
-	
+
+	//if(!myId) printf("A\n");
+	//matPrint(A, n);
+	//if(!myId) printf("B\n");
+	//matPrint(B, n);
+
+	//matInitId(D, n);
+	//matInitNull(F, n);
+
+//	double startTime = MPI_Wtime();
+	//if(!myId) printf("Id\n");
+	//matPrint(D, n);
+
+	//matLocMult(D, D, F, nLoc); 
+	//if(!myId) printf("Naive multiplication\n");
+	//matPrint(F, n);
+
+	//matInitId(D, n);
+	//matInitId(E, n);
+
 	matInitA(A, n);
 	matInitB(B, n);
 	matInitNull(C, n);
-	matInitId(D, n);
-	matInitNull(E, n);
-	matInitNull(F, n);
-
-	//double startTime = MPI_Wtime();
-	matMult(D, D, F, n); 
-	matMultCannon(D, D, C, n);
-	//double diff_time = MPI_Wtime() - startTime;
+	matMultCannon(A, B, C, n);
+//	double diff_time = MPI_Wtime() - startTime;
 //	printf("Equal?: %d\n",	matEquals(B,C,n));
-	//printf("Time %i:     %.2f MFLOPS\n", myId, numFlops / (diff_time * 1000000.0));
+//	printf("Time %i:     %.2f MFLOPS\n", myId, numFlops / (diff_time * 1000000.0));
 
-	//startTime = MPI_Wtime();
+//	startTime = MPI_Wtime();
 //	matMatMult(nProc(n), D, D, E);
-	//diff_time = MPI_Wtime() - startTime;
-	//printf("Bib-Time %i: %.2f MFLOPS\n", myId, numFlops / (diff_time * 1000000.0));
-	printf("%d Eins\n", myId);
-	//MPI_Barrier(MPI_COMM_WORLD);
+//	diff_time = MPI_Wtime() - startTime;
+//	printf("Bib-Time %i: %.2f MFLOPS\n", myId, numFlops / (diff_time * 1000000.0));
+//	MPI_Barrier(MPI_COMM_WORLD);
+	//matInitNull(E, n);
+	//if(!myId) printf("Null\n");
+	//matPrint(E, n);
+//	MPI_Barrier(MPI_COMM_WORLD);
 
-	if(!myId) printf("Null\n");
-	matPrint(E, n);
-	printf("%d Zwei\n", myId);
-	//MPI_Barrier(MPI_COMM_WORLD);
-	if(!myId) printf("B\n");
-	matPrint(B, n);
-	if(!myId) printf("A\n");
-	matPrint(A, n);
-	if(!myId) printf("Id\n");
-	matPrint(D, n);
 
-	if(!myId) printf("Cannon\n");
-	matPrint(C, n);
+
+	/*if(!myId) printf("Cannon\n");
+	matPrint(C, n);*/
 //	if(!myId) printf("Library multiplication\n");
 //	matPrint(E, n);
-	if(!myId) printf("Naive multiplication\n");
-	matPrint(F, n);
 
-	//MPI_Barrier(MPI_COMM_WORLD);
 
-	printf("\n%d Equals? %d \n",myId, matEquals(C, F, n));
-
+//	MPI_Barrier(MPI_COMM_WORLD);
+	matInitA(A, n);
+	int eq = matEquals(C, A, n);
+	if (!myId && eq)
+		printf("\nIs Equal!\n");
+	else if (!myId)
+		printf("\nIs Not Equal!\n");
 	free(A);
 	free(B);
 	free(C);
