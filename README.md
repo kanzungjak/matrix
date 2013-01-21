@@ -1,4 +1,0 @@
-matrix
-======
-
-MPI Matrix Multiplication

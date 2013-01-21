@@ -7,6 +7,7 @@
 
 int myId, numProcs, blocksPerDim;
 
+// Assert with error message
 void assert(int assertion, char* errMsg) {
 	if(!assertion) {
 		if(!myId)
@@ -16,52 +17,62 @@ void assert(int assertion, char* errMsg) {
 	}
 }
 
-int nProc(int n) { // Width (and height) for each process
+// Width (and height) for each PE
+int nProc(int n) {
 	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
 	return (n / blocksPerDim);
 }
 
+// Position of local matrix block in total matrix (horizontally from left to right)
 int xPos() {
 	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
 	return (myId % blocksPerDim);
 }
 
+// Position of local matrix block in total matrix (vertically from top to bottom)
 int yPos() {
 	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
 	return (myId / blocksPerDim);
 }
 
+// Is the local matrix block on the left side?
 int isLeftMost() {
 	return xPos() == 0;
 }
 
+// Is the local matrix block on the right side?
 int isRightMost() {
 	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
 	return (myId + 1) % blocksPerDim == 0;
 }
 
+// To which PE does the block to the left belong?
 int leftNb() {
 	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
 	return (isLeftMost() ? (myId + blocksPerDim - 1) : (myId - 1));
 }
 
+// To which PE does the block to the right belong?
 int rightNb() {
 	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
 	return (isRightMost() ? (myId - blocksPerDim + 1) : (myId + 1));
 }
 
+// To which PE does the block above belong?
 int upperNb() {
 	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
 	assert(numProcs > 0, "numProcs is not calculated yet.");
 	return ((myId - blocksPerDim + numProcs) % numProcs);
 }
 
+// To which PE does the block below belong?
 int lowerNb() {
 	assert(blocksPerDim > 0, "blocksPerDim is not calculated yet.");
 	assert(numProcs > 0, "numProcs is not calculated yet.");
 	return ((myId + blocksPerDim) % numProcs);
 }
 
+// Since floating point values are rounded, we do not test on exact equality
 int compareDouble(double a, double b) {
 	double diff = a - b;
 	if(diff >= 0)
@@ -70,6 +81,7 @@ int compareDouble(double a, double b) {
 		return (-diff < EPSILON);
 }
 
+// Is the number a square number?
 int isSquare(int x) {
 	int root = (int) sqrt(x);
 	return root * root == x;
@@ -100,12 +112,10 @@ void matLocInitId(double* mat, int nLoc) {
 
 // Identity Matrix (global)
 void matInitId(double* mat, int n) {
-	if(xPos() == yPos()) {
+	if(xPos() == yPos())
 		matLocInitId(mat, nProc(n));
-	}
-	else {
+	else 
 		matLocInitNull(mat, nProc(n));
-	}
 }
 
 // A[i,j] = i / (j + 1) (local)
@@ -113,11 +123,9 @@ void matLocInitA(double* mat, int nLoc, int xOff, int yOff) {
 	int i, j;
 	xOff *= nLoc;
 	yOff *= nLoc;
-	for(i = 0; i < nLoc; i++) {
-		for(j = 0; j < nLoc; j++) {
-			mat[i * nLoc + j] = (double) (i + yOff) / (j + xOff  + 1);
-		}
-	}
+	for(i = 0; i < nLoc; i++)
+		for(j = 0; j < nLoc; j++)
+			mat[i * nLoc + j] = (double) (i + yOff) / (j + xOff  + 1);	
 }
 
 // A[i,j] = i / (j + 1) (global)
@@ -131,11 +139,9 @@ void matLocInitB(double* mat, int nLoc, int xOff, int yOff) {
 	int i, j;
 	xOff *= nLoc;
 	yOff *= nLoc;
-	for(i = 0; i < nLoc; i++) {
-		for(j = 0; j < nLoc; j++) {
-			mat[i * nLoc + j] = (double) (i+1 + yOff) / (nLoc * blocksPerDim * (j + xOff + 1));
-		}
-	}
+	for(i = 0; i < nLoc; i++) 
+		for(j = 0; j < nLoc; j++) 
+			mat[i * nLoc + j] = (double) (i+1 + yOff) / (nLoc * blocksPerDim * (j + xOff + 1));	
 }
 
 // B[i,j] = (i + 1) / (n * (j + 1)) (global)
@@ -143,7 +149,7 @@ void matInitB(double* mat, int n) {
 	matLocInitB(mat, nProc(n), xPos(), yPos());
 }
 
-// Print entries of a matrix, not a good idea for big matrices
+// Print entries of whole matrix, not a good idea for big matrices
 void matPrint(double* mat, int n) {
 	int i,j, nLoc;
 	double* complete = malloc(n * n * sizeof(double));
@@ -161,14 +167,14 @@ void matPrint(double* mat, int n) {
 
 		MPI_Comm_split(MPI_COMM_WORLD, xPos(), myId, &row);
 
-		if(!yPos() )
+		if( !yPos() )
 			MPI_Gather(MPI_IN_PLACE, n * nLoc, MPI_DOUBLE,
-			   complete, n * nLoc, MPI_DOUBLE,
-			   0, row);
+				   complete, n * nLoc, MPI_DOUBLE,
+				   0, row);
 		else
 			MPI_Gather(complete, n * nLoc, MPI_DOUBLE,
-			   complete, n * nLoc, MPI_DOUBLE,
-			   0, row);
+				   complete, n * nLoc, MPI_DOUBLE,
+				   0, row);
 		MPI_Comm_free(&row);
 	} else {
 		complete = mat;
@@ -190,7 +196,7 @@ void matPrint(double* mat, int n) {
 		free(complete);
 }
 
-// Naive matrix multiplication
+// Naive matrix multiplication: mat = A * B (local)
 void matLocMult(double* A, double* B, double* mat, int nLoc) {
 	int i, j, k;
 	for(i = 0; i < nLoc; i++)
@@ -199,17 +205,19 @@ void matLocMult(double* A, double* B, double* mat, int nLoc) {
 				mat[i * nLoc + j] += A[i * nLoc + k] * B[k * nLoc + j];
 }
 
+// Naive matrix sum: mat = A + B (local)
 void matLocAdd(double* A, double* B, double* mat, int nLoc) {
 	int i;
-	for(i = 0; i < nLoc * nLoc; i++) {
+	for(i = 0; i < nLoc * nLoc; i++)
 		mat[i] = A[i] + B[i];
-	}
 }
 
+// Naive matrix sum: mat = A + B (global)
 void matAdd(double* A, double* B, double* mat, int n) {
 	matLocAdd(A, B, mat, nProc(n));
 }
 
+// Naive matrix multiplication and sum: mat = mat + A * B (local)
 void matLocMultAdd(double* A, double* B, double* mat, int nLoc) {
 	double* C = malloc(nLoc * nLoc * sizeof(double));
 	matLocInitNull(C, nLoc);
@@ -218,6 +226,7 @@ void matLocMultAdd(double* A, double* B, double* mat, int nLoc) {
 	free(C);
 }
 
+// Naive matrix multiplication: mat = A * B (global)
 void matMult(double* A, double* B, double* mat, int n) { // FIXME: Does not work yet, help welcome!
 	int i,j, nLoc;
 	double* NewA, * NewB, * Loc;
@@ -295,13 +304,18 @@ void matMult(double* A, double* B, double* mat, int n) { // FIXME: Does not work
 			matLocMult(&NewA[i * nLoc * nLoc], B, Loc, nLoc);
 		matAdd(mat, Loc, mat, n);
 	}
+	MPI_Comm_free(&line);
+	MPI_Comm_free(&row);
+	free(NewA);
+	free(NewB);
+	free(Loc);
 }
 
-void rotateLeft(double* mat, int n) {
-	int nLoc, left, right;
+// Block rotation to the left
+void locRotateLeft(double* mat, int nLoc) {
+	int left, right;
 	MPI_Status status;
 	
-	nLoc = nProc(n);
 	left = leftNb();
 	right = rightNb();
 	
@@ -310,11 +324,11 @@ void rotateLeft(double* mat, int n) {
 			     MPI_COMM_WORLD, &status);
 }
 
-void rotateUp(double* mat, int n) {
-	int nLoc, upper, lower;
+// Block rotation upwards
+void locRotateUp(double* mat, int nLoc) {
+	int upper, lower;
 	MPI_Status status;
 	
-	nLoc = nProc(n);
 	upper = upperNb();
 	lower = lowerNb();
 	
@@ -323,50 +337,52 @@ void rotateUp(double* mat, int n) {
 			     MPI_COMM_WORLD, &status);
 }
 
+// Good Cannon Matrix Multiplication
 void matMultCannon(double* A, double* B, double* mat, int n) {
 	assert(isSquare(numProcs), "numProcs is not a square number.");
 	assert(n % blocksPerDim == 0, "Sqrt(numProcs) does not divide n.");
 
 	int i, nLoc;
+	nLoc = nProc(n);
 	matInitNull(mat, n);
 
 	for(i = 0; i < yPos(); i++){ // y-dim
-		rotateLeft(A, n);
+		locRotateLeft(A, nLoc);
 	}
 	for(i = 0; i < xPos(); i++){ // x-dim
-		rotateUp(B, n);	
+		locRotateUp(B, nLoc);	
 	}
-	nLoc = nProc(n);
 	for (i = 0; i < blocksPerDim; i++) {
 		matMatMultAdd(nLoc, A, B, mat);
-		rotateLeft(A, n);
-		rotateUp(B, n);
+		locRotateLeft(A, nLoc);
+		locRotateUp(B, nLoc);
 	}
 }
 
+// Naive (concerning local multiplicatiuon and sum) Cannon Matrix Multiplication
 void matMultNaiveCannon(double* A, double* B, double* mat, int n) {
 	assert(isSquare(numProcs), "numProcs is not a square number.");
 	assert(n % blocksPerDim == 0, "Sqrt(numProcs) does not divide n.");
 
 	int i, nLoc;
+	nLoc = nProc(n);
 	matInitNull(mat, n);
 
 	for(i = 0; i < yPos(); i++){ // y-dim
-		rotateLeft(A, n);
+		locRotateLeft(A, nLoc);
 	}
 	for(i = 0; i < xPos(); i++){ // x-dim
-		rotateUp(B, n);	
+		locRotateUp(B, nLoc);	
 	}
-	nLoc = nProc(n);
 	for (i = 0; i < blocksPerDim; i++) {
 		matLocMultAdd(A, B, mat, nLoc);
-		rotateLeft(A, n);
-		rotateUp(B, n);
+		locRotateLeft(A, nLoc);
+		locRotateUp(B, nLoc);
 	}
 }
 
-//0: First entry, which is unequal
-//1: A = B
+// Are all values of our matrix block equal? (local)
+// 1 if yes, 0 if not (we might print out the first unequal value we find)
 int matLocEquals(double* A, double* B, int nLoc){
 	int i, j, k;
 	for(i = 0; i < nLoc; i++)
@@ -378,6 +394,8 @@ int matLocEquals(double* A, double* B, int nLoc){
 	return 1;
 }
 
+// Are all matrix values equal? (global)
+// 1 if yes, 0 if not (each process might print out the first unequal value it finds)
 int matEquals(double* A, double* B, int n){
 	int e, nLoc, eq;
 	nLoc = nProc(n);
@@ -387,9 +405,9 @@ int matEquals(double* A, double* B, int n){
 }
 
 int main(int argc, char** argv) {
-	int n, nLoc, eq;
-	double numFlops, startTime, diffTime;
-	double* A, * B, * C;
+	int n, nLoc, eq; //length of matrix, local length for a PE, return value of matEquals (for root)
+	double numFlops, startTime, diffTime; //estimated number of FLOPS, timing stuff
+	double *A, *B, *C; //matrices
 
 	n = atoi(argv[1]); // Width (and height) of a matrix
 	if (argc < 2) {
@@ -401,10 +419,10 @@ int main(int argc, char** argv) {
 	MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &myId);
 
-	blocksPerDim = (int) sqrt(numProcs);
+	blocksPerDim = (int) sqrt(numProcs); //number of PEs for one dimension
 	nLoc = nProc(n);
 
-	numFlops = 2 * pow(n,3) - pow(n,2); // Number of flops for naive matrix-multiplication
+	numFlops = 2 * pow(n,3) - pow(n,2); // Number of flops for naive matrix multiplication
 
 
 	A = malloc(nLoc * nLoc * sizeof(double));
@@ -417,6 +435,7 @@ int main(int argc, char** argv) {
 		perror("Failure: ");	
 	}
 
+	/*Good Cannon Matrix Multiplication*/
 	matInitA(A, n);
 	matInitB(B, n);
 	matInitNull(C, n);
@@ -445,6 +464,7 @@ int main(int argc, char** argv) {
 	if (!myId)
 		printf("---------------------------------------------------------------\n");
 
+	/*Naive Cannon Matrix Multiplication*/
 	matInitA(A, n);
 	matInitB(B, n);
 	matInitNull(C, n);
