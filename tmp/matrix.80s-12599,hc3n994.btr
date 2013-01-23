@@ -1,0 +1,3 @@
+
+matrix:12599 terminated with signal 11 at PC=7ffbe4849a9e SP=7ffbe31f3e70.  Backtrace:
+/opt/intel/composer_xe_2011_sp1.13.367/mkl/lib/intel64/libmkl_mc3.so(+0x64fa9e)[0x7ffbe4849a9e]

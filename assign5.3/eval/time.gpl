@@ -1,0 +1,50 @@
+#to use umlauts
+set encoding iso_8859_1
+
+# the enhanced option allows format to typeset exponents without problems
+set terminal postscript eps enhanced color
+
+# the name of the output file
+set output "cannonTime.ps"
+
+# the title above the diagram
+set title "Group kk06: Cannon Matrix Multiplication"  
+
+# justify the legends to the left; 
+# that 'left Left' is no typo, but leaving 'Left' out does not change much
+set key top left Left
+
+# the text along the vertical axis 
+# (the numeric values are the results of trial and error experiments)
+set lmargin 10
+set label "time [s]" at screen 0.015,0.5 center  rotate
+
+# the text along the horizontal axis
+# (the numeric values are the results of trial and error experiments)
+set bmargin 4
+set label "length of matrix" at screen 0.5,0.03 center
+
+# the group id and a timestamp
+# (the numeric values are the results of trial and error experiments)
+set rmargin 5
+set timestamp "Group kk06: %d/%m/%y %H:%M" rotate #51,3
+
+# we are using logarithmic scales
+#  - with powers of 2 along the x axis (requested explicitly) and
+#  - with powers of 10 along th y axis (the default)
+
+
+# the tics along the horizontal axis and the labels for them
+set xtics  auto #0,1,10
+#set format x "2^{%L}"
+
+set yrange  [0:]
+
+# finally the plot command
+plot [1:] '1.data'  using 2:1  ' %lf #%lf ' title "time in seconds (1 PE)" with linespoints, \
+ '4.data'  using 2:1  ' %lf #%lf ' title "time in seconds (4 PEs)" with linespoints, \
+ '9.data'  using 2:1  ' %lf #%lf ' title "time in seconds (9 PEs)" with linespoints,\
+ '16.data'  using 2:1  ' %lf #%lf ' title "time in seconds (16 PEs)" with linespoints,\
+ '25.data'  using 2:1  ' %lf #%lf ' title "time in seconds (25 PEs)" with linespoints,\
+ '1024.data'  using 2:1  ' %lf #%lf ' title "time in seconds (1024 PEs)" with linespoints
+

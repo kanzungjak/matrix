@@ -1,0 +1,5 @@
+for f in *.out; do cat $f | grep -m 1 "seconds" | cut -d ' ' -f 2; done | wc -l
+
+y=0; for x in `cat daten`;do y=$((y+$x)); done; echo $y
+
+cat daten | awk '{ i+=$1 } END { printf "%.2f\n", i }'

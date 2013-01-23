@@ -1,0 +1,8 @@
+
+matrix:10525 terminated with signal 11 at PC=7fac60dd0197 SP=7fff7acdcce0.  Backtrace:
+/opt/openmpi/1.6.3/lib/libmpi.so.1(ompi_request_default_wait+0x17)[0x7fac60dd0197]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(MPI_Wait+0x38)[0x7fac60df5258]
+matrix(matMult+0x3a8)[0x403348]
+matrix(main+0x1dc)[0x402b2c]
+/lib64/libc.so.6(__libc_start_main+0xe6)[0x7fac5f523c36]
+matrix[0x402889]

@@ -1,0 +1,12 @@
+
+matrix:20515 terminated with signal 11 at PC=7fc71398b607 SP=7fff30536b88.  Backtrace:
+/lib64/libc.so.6(memcpy+0x67)[0x7fc71398b607]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(+0x23e739)[0x7fc715378739]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(ompi_datatype_sndrcv+0x50f)[0x7fc7151ddf1f]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(ompi_coll_tuned_gather_intra_basic_linear+0xa2)[0x7fc715242b42]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(mca_coll_sync_gather+0xad)[0x7fc715245f7d]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(PMPI_Gather+0xa5)[0x7fc7151e6325]
+matrix(matPrint+0x180)[0x402c60]
+matrix(main+0x1b9)[0x4028e9]
+/lib64/libc.so.6(__libc_start_main+0xe6)[0x7fc713926c36]
+matrix[0x402669]

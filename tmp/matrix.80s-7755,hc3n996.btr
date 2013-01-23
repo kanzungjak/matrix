@@ -1,0 +1,8 @@
+
+matrix:7755 terminated with signal 11 at PC=7fa46b50c197 SP=7fff00dc20f0.  Backtrace:
+/opt/openmpi/1.6.3/lib/libmpi.so.1(ompi_request_default_wait+0x17)[0x7fa46b50c197]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(MPI_Wait+0x38)[0x7fa46b531258]
+matrix(matMult+0x399)[0x403339]
+matrix(main+0x1dc)[0x402b2c]
+/lib64/libc.so.6(__libc_start_main+0xe6)[0x7fa469c5fc36]
+matrix[0x402889]

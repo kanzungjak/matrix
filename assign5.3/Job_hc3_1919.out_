@@ -1,0 +1,11 @@
+Universitaet Karlsruhe / Rechenzentrum   +++ hc3 +++   JMS 2.3 / slurm 2.4.4
+Job 1919 has been submitted at 20.12.2012/14:09:11 on hc3n994
+Command: job_submit -t 30 -m 2000 -p 1 -c p mpirun matrix 
+Job 1919 started at 20.12.2012/14:09:17 on hc3n008
+1 tasks running on 1 nodes shared: 1*hc3n008
+================================================================================
+/opt/openmpi/1.6.3/bin/mpirun         --hostfile /scratch/JMS_tmpdir/Job_1919/tmp.LZWopAFO3K /jms/home/jobscript/run matrix
+Time 0:     794.48 MFLOPS
+Bib-Time 0: 7990.92 MFLOPS
+================================================================================
+Job 1919 completed at 20.12.2012/14:09:20 (COMPLETED)

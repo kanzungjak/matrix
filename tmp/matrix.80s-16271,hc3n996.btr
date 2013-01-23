@@ -1,0 +1,6 @@
+
+matrix:16271 terminated with signal 11 at PC=7f685dc37b7a SP=7fffd1bfe310.  Backtrace:
+/lib64/libc.so.6(+0x36b7a)[0x7f685dc37b7a]
+matrix(main+0x4f)[0x40277f]
+/lib64/libc.so.6(__libc_start_main+0xe6)[0x7f685dc1fc36]
+matrix[0x402669]

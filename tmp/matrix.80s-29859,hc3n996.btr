@@ -1,0 +1,10 @@
+
+matrix:29859 terminated with signal 11 at PC=7f3340a485c3 SP=7fffe8cc1368.  Backtrace:
+/opt/openmpi/1.6.3/lib/libmpi.so.1(+0x22b5c3)[0x7f3340a485c3]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(opal_memory_ptmalloc2_int_free+0x340)[0x7f3340a495e0]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(opal_memory_ptmalloc2_free+0xd3)[0x7f3340a49963]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(+0x2444d1)[0x7f3340a614d1]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(ompi_mpi_finalize+0x259)[0x7f33408b7e59]
+matrix(main+0x5d1)[0x402f21]
+/lib64/libc.so.6(__libc_start_main+0xe6)[0x7f333f009c36]
+matrix[0x402889]

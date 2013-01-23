@@ -1,0 +1,8 @@
+
+matrix:5952 terminated with signal 6 at PC=7fdee43d7b55 SP=7ffff3f2edd8.  Backtrace:
+/lib64/libc.so.6(gsignal+0x35)[0x7fdee43d7b55]
+/lib64/libc.so.6(abort+0x181)[0x7fdee43d9131]
+/lib64/libc.so.6(__assert_fail+0xf0)[0x7fdee43d0a10]
+matrix(main+0x943)[0x402ba3]
+/lib64/libc.so.6(__libc_start_main+0xe6)[0x7fdee43c3c36]
+matrix[0x402199]

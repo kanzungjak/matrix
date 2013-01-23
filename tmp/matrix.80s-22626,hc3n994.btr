@@ -1,0 +1,7 @@
+
+matrix:22626 terminated with signal 11 at PC=408f07 SP=7fffb2d764e8.  Backtrace:
+matrix(__intel_memset+0xac7)[0x408f07]
+matrix(_intel_fast_memset.J+0x6)[0x406e96]
+matrix(main+0x4dd)[0x402fdd]
+/lib64/libc.so.6(__libc_start_main+0xe6)[0x7f065a986c36]
+matrix[0x402a39]

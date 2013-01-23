@@ -1,0 +1,18 @@
+
+matrix:6019 terminated with signal 11 at PC=7fe9888da62a SP=7ffff201eed8.  Backtrace:
+/opt/openmpi/1.6.3/lib/libmpi.so.1(+0x22b62a)[0x7fe9888da62a]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(opal_memory_ptmalloc2_int_malloc+0x6a8)[0x7fe9888dd188]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(opal_memory_ptmalloc2_int_memalign+0x6c)[0x7fe9888dda9c]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(opal_memory_ptmalloc2_memalign+0x9b)[0x7fe9888de74b]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(ompi_free_list_grow+0xc8)[0x7fe988733a28]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(+0x16eec7)[0x7fe98881dec7]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(mca_pml_ob1_recv_frag_callback_match+0x67d)[0x7fe98881eb6d]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(mca_btl_sm_component_progress+0x262)[0x7fe988783392]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(opal_progress+0x5a)[0x7fe9888f540a]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(mca_pml_ob1_recv+0x23d)[0x7fe98881b94d]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(ompi_coll_tuned_gather_intra_basic_linear+0xe5)[0x7fe9887b7b85]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(mca_coll_sync_gather+0xad)[0x7fe9887baf7d]
+/opt/openmpi/1.6.3/lib/libmpi.so.1(PMPI_Gather+0xa5)[0x7fe98875b325]
+matrix(main+0x78f)[0x402a6f]
+/lib64/libc.so.6(__libc_start_main+0xe6)[0x7fe986e9bc36]
+matrix[0x402219]

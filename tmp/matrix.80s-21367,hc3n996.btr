@@ -1,0 +1,4 @@
+
+matrix:21367 terminated with signal 11 at PC=0 SP=7fffd27f58f8.  Backtrace:
+/usr/lib64/libinfinipath.so.4(+0x378c)[0x7f7fc256d78c]
+/lib64/libc.so.6(+0x32bf0)[0x7f7fc31efbf0]
