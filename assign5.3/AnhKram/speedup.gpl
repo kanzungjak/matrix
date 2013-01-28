@@ -1,0 +1,49 @@
+#to use umlauts
+set encoding iso_8859_1
+
+# the enhanced option allows format to typeset exponents without problems
+set terminal postscript eps enhanced color
+
+# the name of the output file
+set output "cannonSpeedUp.ps"
+
+# the title above the diagram
+set title "Group kk06: Cannon Matrix Multiplication"  
+
+# justify the legends to the left; 
+# that 'left Left' is no typo, but leaving 'Left' out does not change much
+set key top left Left
+
+# the text along the vertical axis 
+# (the numeric values are the results of trial and error experiments)
+set lmargin 10
+set label "Speedup" at screen 0.015,0.5 center  rotate
+
+# the text along the horizontal axis
+# (the numeric values are the results of trial and error experiments)
+set bmargin 4
+set label "Number of PEs" at screen 0.5,0.03 center
+
+# the group id and a timestamp
+# (the numeric values are the results of trial and error experiments)
+set rmargin 5
+set timestamp "Group kk06: %d/%m/%y %H:%M" rotate #51,3
+
+# we are using logarithmic scales
+#  - with powers of 2 along the x axis (requested explicitly) and
+#  - with powers of 10 along th y axis (the default)
+
+
+# the tics along the horizontal axis and the labels for them
+set xtics  auto #0,1,10
+#set format x "2^{%L}"
+
+set yrange  [0:]
+
+# finally the plot command
+plot [1:50] '120su.log'  using 1:(0.008713/$2)  ' %lf %lf ' title "120x120 matrix" with linespoints,\
+ '480SU.log'  using 1:(0.036664/$2)  ' %lf %lf ' title "480x480" with linespoints,\
+ '1920SU.log'  using 1:(5.200046/$2)  ' %lf %lf %lf' title "1920x1920" with linespoints,\
+ '4096SU.log'  using 1:(33.967228/$2)  ' %lf %lf %lf' title "4096x4096" with linespoints, \
+ '6000SU.log'  using 1:(64.988499/$2)  ' %lf %lf %lf' title "6000x6000" with linespoints, \
+ 'x.log' using 1:($1) ' %lf ' title "Ideal Speedup" with linespoints
