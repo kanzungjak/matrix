@@ -5,7 +5,7 @@ set encoding iso_8859_1
 set terminal postscript eps enhanced color
 
 # the name of the output file
-set output "cannonTime.ps"
+set output "cannonSpeedUp.ps"
 
 # the title above the diagram
 set title "Group kk06: Cannon Matrix Multiplication"  
@@ -17,12 +17,12 @@ set key top left Left
 # the text along the vertical axis 
 # (the numeric values are the results of trial and error experiments)
 set lmargin 10
-set label "time [s]" at screen 0.015,0.5 center  rotate
+set label "Speedup" at screen 0.015,0.5 center  rotate
 
 # the text along the horizontal axis
 # (the numeric values are the results of trial and error experiments)
 set bmargin 4
-set label "length of matrix" at screen 0.5,0.03 center
+set label "Number of PEs" at screen 0.5,0.03 center
 
 # the group id and a timestamp
 # (the numeric values are the results of trial and error experiments)
@@ -37,14 +37,18 @@ set timestamp "Group kk06: %d/%m/%y %H:%M" rotate #51,3
 # the tics along the horizontal axis and the labels for them
 set xtics  auto #0,1,10
 #set format x "2^{%L}"
+#set size square
+# 'x.log' using 1:($1) ' %lf ' title "Ideal Speedup" with lines
+
 
 set yrange  [0:]
 
 # finally the plot command
-plot [0:] '1.log'  using 2:1  ' %lf %lf ' title "time in seconds (1 PE)" with linespoints, \
- '4.log'  using 2:1  ' %lf %lf ' title "time in seconds (4 PEs)" with linespoints, \
- '9.log'  using 2:1  ' %lf %lf ' title "time in seconds (9 PEs)" with linespoints,\
- '16.log'  using 2:1  ' %lf %lf ' title "time in seconds (16 PEs)" with linespoints,\
- '25.log'  using 2:1  ' %lf %lf ' title "time in seconds (25 PEs)" with linespoints,\
- '36.log'  using 2:1  ' %lf %lf ' title "time in seconds (36 PEs)" with linespoints
-
+I(x) = x
+plot [0:] '120SU.log'  using 1:(0.008354/$2)  ' %lf %lf ' title "120x120 matrix" with linespoints,\
+ '480SU.log'  using 1:(0.024186/$2)  ' %lf %lf ' title "480x480" with linespoints,\
+ '1020SU.log' using 1:(0.244485/$2) ' %lf %lf ' title "1020x1020" with linespoints,\
+ '1920SU.log'  using 1:(1.501290/$2)  ' %lf %lf %lf' title "1920x1920" with linespoints,\
+ '4080SU.log'  using 1:(31.358969/$2)  ' %lf %lf %lf' title "4080x4080" with linespoints, \
+ '6000SU.log'  using 1:(61.768043/$2)  ' %lf %lf %lf' title "6000x6000" with linespoints, \
+  I(x) w lines ls 7  title "Ideal Speedup"

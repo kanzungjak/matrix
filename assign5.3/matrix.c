@@ -233,10 +233,11 @@ void locRotateLeft(double* mat, int nLoc) {
 	
 	left = leftNb();
 	right = rightNb();
-	
-	MPI_Sendrecv_replace(mat, nLoc * nLoc, MPI_DOUBLE,
-			     left, 37, right, MPI_ANY_TAG,
-			     MPI_COMM_WORLD, &status);
+
+	if (numProcs > 1)
+		MPI_Sendrecv_replace(mat, nLoc * nLoc, MPI_DOUBLE,
+				     left, 37, right, MPI_ANY_TAG,
+				     MPI_COMM_WORLD, &status);
 }
 
 // Block rotation upwards
@@ -246,10 +247,11 @@ void locRotateUp(double* mat, int nLoc) {
 	
 	upper = upperNb();
 	lower = lowerNb();
-	
-	MPI_Sendrecv_replace(mat, nLoc * nLoc, MPI_DOUBLE,
-			     upper, 38, lower, MPI_ANY_TAG,
-			     MPI_COMM_WORLD, &status);
+
+	if (numProcs > 1)
+		MPI_Sendrecv_replace(mat, nLoc * nLoc, MPI_DOUBLE,
+				     upper, 38, lower, MPI_ANY_TAG,
+				     MPI_COMM_WORLD, &status);
 }
 
 // Good Cannon Matrix Multiplication

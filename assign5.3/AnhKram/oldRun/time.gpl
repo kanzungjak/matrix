@@ -41,10 +41,10 @@ set xtics  auto #0,1,10
 set yrange  [0:]
 
 # finally the plot command
-plot [0:] '1.log'  using 2:1  ' %lf %lf ' title "time in seconds (1 PE)" with linespoints, \
+plot [1:] '1.log'  using 2:1  ' %lf %lf ' title "time in seconds (1 PE)" with linespoints, \
  '4.log'  using 2:1  ' %lf %lf ' title "time in seconds (4 PEs)" with linespoints, \
  '9.log'  using 2:1  ' %lf %lf ' title "time in seconds (9 PEs)" with linespoints,\
  '16.log'  using 2:1  ' %lf %lf ' title "time in seconds (16 PEs)" with linespoints,\
- '25.log'  using 2:1  ' %lf %lf ' title "time in seconds (25 PEs)" with linespoints,\
+ '25.log'  using 2:1  ' %lf %lf ' title "time in seconds (25 PEs)" with linespoints, \
  '36.log'  using 2:1  ' %lf %lf ' title "time in seconds (36 PEs)" with linespoints
 

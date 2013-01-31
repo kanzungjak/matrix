@@ -5,7 +5,7 @@ set encoding iso_8859_1
 set terminal postscript eps enhanced color
 
 # the name of the output file
-set output "cannonTime.ps"
+set output "cannonSpeedupLength.ps"
 
 # the title above the diagram
 set title "Group kk06: Cannon Matrix Multiplication"  
@@ -17,7 +17,7 @@ set key top left Left
 # the text along the vertical axis 
 # (the numeric values are the results of trial and error experiments)
 set lmargin 10
-set label "time [s]" at screen 0.015,0.5 center  rotate
+set label "speedup" at screen 0.015,0.5 center  rotate
 
 # the text along the horizontal axis
 # (the numeric values are the results of trial and error experiments)

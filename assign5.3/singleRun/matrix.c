@@ -225,92 +225,6 @@ void matLocMultAdd(double* A, double* B, double* mat, int nLoc) {
 	matLocAdd(mat, C, mat, nLoc);
 	free(C);
 }
-
-// Naive matrix multiplication: mat = A * B (global)
-void matMult(double* A, double* B, double* mat, int n) { // FIXME: Does not work yet, help welcome!
-	int i,j, nLoc;
-	double* NewA, * NewB, * Loc;
-	int lineId, rowId;
-	MPI_Status status[2];
-	MPI_Request* reqLine, * reqRow;
-	
-	nLoc = nProc(n);
-	NewA = malloc(blocksPerDim * nLoc * nLoc * sizeof(double));
-	matInitNull(NewA, n);
-	NewB = malloc(blocksPerDim * nLoc * nLoc * sizeof(double));
-	matInitNull(NewB, n);
-	Loc = malloc(nLoc * nLoc * sizeof(double));
-	matInitNull(Loc, n);
-	// A*B = |A0*B0|
-
-	// A*B = |A0*B0+A1*B2|A0*B1+A1*B3|
-	//       |A2*B0+A3*B2|A2*B1+A3*B3|
-
-	// A*B = |A0*B0+A1*B3+A2*B6|A0*B1+A1*B4+A2*B7|A0*B2+A1*B5+A2*B8|
-	// 	 |A3*B0+A4*B3+A5*B6|A3*B1+A4*B4+A5*B7|A3*B2+A4*B5+A5*B8|
-	// 	 |A6*B0+A7*B3+A8*B6|A6*B1+A7*B4+A8*B7|A6*B2+A7*B5+A8*B8|
-
-	// A*B = |A0 *B0+A1 *B4+A2 *B8+A3 *B12|A0 *B1+A1 *B5+A2 *B9+A3 *B13|A0 *B2+A1 *B6+A2 *B10+A3 *B14|A0 *B3+A1 *B7+A2 *B11+A3 *B15|
-	// 	 |A4 *B0+A5 *B4+A6 *B8+A7 *B12|A4 *B1+A5 *B5+A6 *B9+A7 *B13|A4 *B2+A5 *B6+A6 *B10+A7 *B14|A4 *B3+A5 *B7+A6 *B11+A7 *B15|
-	// 	 |A8 *B0+A9 *B4+A10*B8+A11*B12|A8 *B1+A9 *B5+A10*B9+A11*B13|A8 *B2+A9 *B6+A10*B10+A11*B14|A8 *B3+A9 *B7+A10*B11+A11*B15|
-	// 	 |A12*B0+A13*B4+A14*B8+A15*B12|A12*B1+A13*B5+A14*B9+A15*B13|A12*B2+A13*B6+A14*B10+A15*B14|A12*B3+A13*B7+A14*B11+A15*B15|
-
-	MPI_Comm line, row;
-
-	MPI_Comm_split(MPI_COMM_WORLD, yPos(), myId, &line);
-	MPI_Comm_rank(line, &lineId);
-	MPI_Comm_split(MPI_COMM_WORLD, xPos(), myId, &row);
-	MPI_Comm_rank(row, &rowId);
-	reqLine = malloc(blocksPerDim * sizeof(MPI_Request));
-	reqRow = malloc(blocksPerDim * sizeof(MPI_Request));
-
-	matInitNull(mat, n);
-
-	for(i = 0; i < blocksPerDim; i++) {
-		if(i != lineId)
-			MPI_Isend(A, nLoc * nLoc, MPI_DOUBLE, i, i, line, &reqLine[i]);
-	}
-	for(j = 0; j < blocksPerDim; j++) {
-		if(j != rowId)
-			MPI_Isend(B, nLoc * nLoc, MPI_DOUBLE, j, j, row, &reqRow[j]);
-	}
-
-	for(i = 0; i < blocksPerDim; i++) {
-		matInitNull(NewA, n);
-		if(i != lineId)
-			MPI_Irecv(&NewA[i * nLoc * nLoc], nLoc * nLoc, MPI_DOUBLE, i, i, line, &reqLine[i]);
-	}
-
-	for(j = 0; j < blocksPerDim; j++) {
-		matInitNull(NewB, n);
-		if(j != rowId)
-			MPI_Irecv(&NewB[j * nLoc * nLoc], nLoc * nLoc, MPI_DOUBLE, j, j, row, &reqRow[j]);
-	}
-
-	for(i = 0; i < blocksPerDim; i++) {
-		matInitNull(Loc, n);
-		printf("Processor %d with (%d,%d) is waiting for its line.\n",myId,i,j);
-		if(i != lineId)
-			MPI_Wait(&reqLine[i], &status[0]);
-		printf("Processor %d with (%d,%d) is waiting for its row.\n",myId,i,j);
-		if(j != rowId)
-			MPI_Wait(&reqRow[j], &status[1]);
-		printf("Processor %d with (%d,%d) has received.\n",myId,i,j);
-		if (i != lineId && i != rowId)
-			matLocMult(&NewA[i * nLoc * nLoc], &NewB[j * nLoc * nLoc], Loc, nLoc);
-		else if (i == rowId)
-			matLocMult(A, &NewB[i * nLoc * nLoc], Loc, nLoc);
-		else if (j == lineId)
-			matLocMult(&NewA[i * nLoc * nLoc], B, Loc, nLoc);
-		matAdd(mat, Loc, mat, n);
-	}
-	MPI_Comm_free(&line);
-	MPI_Comm_free(&row);
-	free(NewA);
-	free(NewB);
-	free(Loc);
-}
-
 // Block rotation to the left
 void locRotateLeft(double* mat, int nLoc) {
 	int left, right;
@@ -318,8 +232,8 @@ void locRotateLeft(double* mat, int nLoc) {
 	
 	left = leftNb();
 	right = rightNb();
-	
-	MPI_Sendrecv_replace(mat, nLoc * nLoc, MPI_DOUBLE,
+	if( numProcs > 1)	
+		MPI_Sendrecv_replace(mat, nLoc * nLoc, MPI_DOUBLE,
 			     left, 37, right, MPI_ANY_TAG,
 			     MPI_COMM_WORLD, &status);
 }
@@ -331,8 +245,8 @@ void locRotateUp(double* mat, int nLoc) {
 	
 	upper = upperNb();
 	lower = lowerNb();
-	
-	MPI_Sendrecv_replace(mat, nLoc * nLoc, MPI_DOUBLE,
+	if(numProcs > 1)
+		MPI_Sendrecv_replace(mat, nLoc * nLoc, MPI_DOUBLE,
 			     upper, 38, lower, MPI_ANY_TAG,
 			     MPI_COMM_WORLD, &status);
 }
@@ -342,8 +256,7 @@ void matMultCannon(double* A, double* B, double* mat, int n) {
 	assert(isSquare(numProcs), "numProcs is not a square number.");
 	assert(n % blocksPerDim == 0, "Sqrt(numProcs) does not divide n.");
 
-	int i;
-
+/*
 	for(i = 0; i < yPos(); i++){ // y-dim
 		locRotateLeft(A, nLoc);
 	}
@@ -355,6 +268,8 @@ void matMultCannon(double* A, double* B, double* mat, int n) {
 		locRotateLeft(A, nLoc);
 		locRotateUp(B, nLoc);
 	}
+*/
+	matMatMultAdd(nLoc, A, B, mat);
 }
 
 // Naive (concerning local multiplicatiuon and sum) Cannon Matrix Multiplication
@@ -362,7 +277,9 @@ void matMultNaiveCannon(double* A, double* B, double* mat, int n) {
 	assert(isSquare(numProcs), "numProcs is not a square number.");
 	assert(n % blocksPerDim == 0, "Sqrt(numProcs) does not divide n.");
 
-	int i;
+	int i, nLoc;
+	nLoc = nProc(n);
+	matInitNull(mat, n);
 
 	for(i = 0; i < yPos(); i++){ // y-dim
 		locRotateLeft(A, nLoc);
@@ -370,11 +287,14 @@ void matMultNaiveCannon(double* A, double* B, double* mat, int n) {
 	for(i = 0; i < xPos(); i++){ // x-dim
 		locRotateUp(B, nLoc);	
 	}
+
+
 	for (i = 0; i < blocksPerDim; i++) {
-		matMatMultAdd(nLoc, A, B, mat);
+		matLocMultAdd(A, B, mat, nLoc);
 		locRotateLeft(A, nLoc);
 		locRotateUp(B, nLoc);
 	}
+
 }
 
 // Are all values of our matrix block equal? (local)
@@ -431,11 +351,7 @@ int main(int argc, char** argv) {
 	if(!A || !B || !C) {
 		perror("Failure: ");	
 	}
-
-	char* filename = argv[3];
-	strcat(filename, ".log");
-
-	FILE *datei = fopen(filename,"a");
+	FILE *datei = fopen("data.log","a");
 	double timesArray[numRuns]; //speichert die Zeiten für alle Läufe
 	int i;
 	for(i = 0; i < numRuns; i++) {
@@ -444,16 +360,11 @@ int main(int argc, char** argv) {
 		matInitB(B, n);
 		matInitNull(C, n);
 		
+		/*time measuring*/
 		startTime = MPI_Wtime();
-		if(numProcs > 1)
-			matMultCannon(A, B, C, n);
-		else
-			matMatMultAdd(n, A, B, C);
+		matMultCannon(A, B, C, n);
 		diffTime = MPI_Wtime() - startTime;
 		timesArray[i] = diffTime;
-		/*if (!myId)
-		  printf("Result:\n");
-		matPrint(C, n);*/
 
 		/*if (!myId) {
 		  printf("Operations per Time: %.2f MFLOPS\n", numFlops / (diffTime * 1000000.0));
@@ -483,7 +394,7 @@ int main(int argc, char** argv) {
 		printf("matrix length: %d, average time: %f\n",n ,avgTime);
 		fprintf(datei, "%f %d\n", avgTime, n);
 	}
-	
+
 	MPI_Barrier(MPI_COMM_WORLD);
 	fclose(datei);
 	free(A);

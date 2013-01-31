@@ -2,7 +2,9 @@
 xccc -Wall matrix.c -o matrix;
 
 
-for i in 120 480 1920 4096 6000 9000 12000 15000
+for i in 
 do
-	xcbatch 36 matrix $i 10;
+	xicbatch 49 matrix $i 50 49;
 done
+
+

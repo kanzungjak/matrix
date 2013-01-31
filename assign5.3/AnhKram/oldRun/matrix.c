@@ -5,7 +5,7 @@
 #include "matrix.h"
 #define EPSILON 0.000001
 
-int myId, numProcs, blocksPerDim, nLoc;
+int myId, numProcs, blocksPerDim;
 
 // Assert with error message
 void assert(int assertion, char* errMsg) {
@@ -342,7 +342,9 @@ void matMultCannon(double* A, double* B, double* mat, int n) {
 	assert(isSquare(numProcs), "numProcs is not a square number.");
 	assert(n % blocksPerDim == 0, "Sqrt(numProcs) does not divide n.");
 
-	int i;
+	int i, nLoc;
+	nLoc = nProc(n);
+	matInitNull(mat, n);
 
 	for(i = 0; i < yPos(); i++){ // y-dim
 		locRotateLeft(A, nLoc);
@@ -362,7 +364,9 @@ void matMultNaiveCannon(double* A, double* B, double* mat, int n) {
 	assert(isSquare(numProcs), "numProcs is not a square number.");
 	assert(n % blocksPerDim == 0, "Sqrt(numProcs) does not divide n.");
 
-	int i;
+	int i, nLoc;
+	nLoc = nProc(n);
+	matInitNull(mat, n);
 
 	for(i = 0; i < yPos(); i++){ // y-dim
 		locRotateLeft(A, nLoc);
@@ -401,7 +405,7 @@ int matEquals(double* A, double* B, int n){
 }
 
 int main(int argc, char** argv) {
-	int n, eq; //length of matrix, local length for a PE, return value of matEquals (for root)
+	int n, nLoc, eq; //length of matrix, local length for a PE, return value of matEquals (for root)
 	double numFlops, startTime, diffTime; //estimated number of FLOPS, timing stuff
 	double *A, *B, *C; //matrices
 	int numRuns = 1;
@@ -431,11 +435,7 @@ int main(int argc, char** argv) {
 	if(!A || !B || !C) {
 		perror("Failure: ");	
 	}
-
-	char* filename = argv[3];
-	strcat(filename, ".log");
-
-	FILE *datei = fopen(filename,"a");
+	FILE *datei = fopen("data.log","a");
 	double timesArray[numRuns]; //speichert die Zeiten für alle Läufe
 	int i;
 	for(i = 0; i < numRuns; i++) {
@@ -443,17 +443,15 @@ int main(int argc, char** argv) {
 		matInitA(A, n);
 		matInitB(B, n);
 		matInitNull(C, n);
-		
+//		if (!myId)
+//			printf("Good Cannon Matrix Multiplication:\n");
 		startTime = MPI_Wtime();
-		if(numProcs > 1)
-			matMultCannon(A, B, C, n);
-		else
-			matMatMultAdd(n, A, B, C);
+		matMultCannon(A, B, C, n);
 		diffTime = MPI_Wtime() - startTime;
 		timesArray[i] = diffTime;
 		/*if (!myId)
 		  printf("Result:\n");
-		matPrint(C, n);*/
+		  matPrint(C, n);*/
 
 		/*if (!myId) {
 		  printf("Operations per Time: %.2f MFLOPS\n", numFlops / (diffTime * 1000000.0));
@@ -484,6 +482,32 @@ int main(int argc, char** argv) {
 		fprintf(datei, "%f %d\n", avgTime, n);
 	}
 	
+	/*Naive Cannon Matrix Multiplication*/
+/*	matInitA(A, n);
+	matInitB(B, n);
+	matInitNull(C, n);
+	if (!myId)
+		printf("Naive Cannon Matrix Multiplication:\n");
+	startTime = MPI_Wtime();	
+	matMultNaiveCannon(A, B, C, n);
+	diffTime = MPI_Wtime() - startTime;
+
+	/*if (!myId)
+		printf("Result:\n");
+	matPrint(C, n);
+
+	if (!myId) {
+		printf("Operations per Time: %.2f MFLOPS\n", numFlops / (diffTime * 1000000.0));
+		printf("Time: %.2f seconds\n", diffTime);
+	}
+
+	matInitA(A, n);
+	eq = matEquals(C, A, n);
+	if (!myId && eq)
+		printf("Correct Result!\n");
+	else if (!myId)
+		printf("Incorrect Result!\n");
+*/
 	MPI_Barrier(MPI_COMM_WORLD);
 	fclose(datei);
 	free(A);

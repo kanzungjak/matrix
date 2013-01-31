@@ -1,0 +1,6 @@
+
+matrix:6367 terminated with signal 11 at PC=409442 SP=7fff1c0f1380.  Backtrace:
+matrix(__intel_sse2_strcat+0x12)[0x409442]
+matrix(main+0x1d2)[0x402e62]
+/lib64/libc.so.6(__libc_start_main+0xe6)[0x7f84c3334c36]
+matrix[0x402bc9]

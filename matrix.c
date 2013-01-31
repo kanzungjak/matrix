@@ -384,7 +384,7 @@ void matMultNaiveCannon(double* A, double* B, double* mat, int n) {
 // Are all values of our matrix block equal? (local)
 // 1 if yes, 0 if not (we might print out the first unequal value we find)
 int matLocEquals(double* A, double* B, int nLoc){
-	int i, j, k;
+	int i, j;
 	for(i = 0; i < nLoc; i++)
 		for(j = 0; j < nLoc; j++)
 			if( !compareDouble(A[i * nLoc + j], B[i * nLoc + j]) ) {
